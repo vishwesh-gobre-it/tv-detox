@@ -1,0 +1,45 @@
+# TCL 65P635 Pro (G07, Google TV, Android 11) at 192.168.31.95, cleaned 2026-11-03.
+# Check: sh check.sh 192.168.31.95:5555 my-tv.txt
+# Undo one line: adb shell pm enable <package>
+# Already off before the cleanup (left as found): au.com.stan.and, tv.wuaki.apptv
+
+# Batch 1: TCL ads and popups
+off com.tcl.waterfall.overseas
+off com.tcl.esticker
+off com.tcl.messagebox
+# com.tcl.notereminder: turned off in batch 1, but TCL firmware turned it back on at the
+# next restart. Left on rather than fighting it (not checked by check.sh).
+off com.tcl.dashboard
+off com.tcl.partnercustomizer
+# After batch 1 the remote's TCL Channel button stopped working (accepted). To get it back, try
+# pm enable com.tcl.waterfall.overseas first, then the others in this batch, restarting after each.
+
+# Batch 2: TCL account and Alexa
+off com.tcl.usercenter
+off com.tcl.smartalexa
+off com.tcl.ttvs
+
+# Batch 3: unused Google apps
+off com.google.android.videos
+off com.google.android.youtube.tvmusic
+off com.google.android.play.games
+off com.google.android.feedback
+off android.autoinstalls.config.google.gtvpai
+
+# Batch 4: Android spare parts
+off com.android.htmlviewer
+off com.android.printspooler
+off com.android.soundpicker
+
+# Step 8: new home screen (install.sh with GOOGLE_TV=1). undo.sh turns these back on.
+off com.google.android.apps.tv.launcherx
+off com.google.android.tungsten.setupwraith
+# After step 8 the remote's Settings button and app buttons (Netflix, YouTube...) stopped working
+# (accepted: settings are reachable on screen). Settings opened Google TV's side panel, part of
+# launcherx. For the app buttons, README's TCL note suggests pm enable com.tcl.partnercustomizer,
+# then com.tcl.ttvs, restarting after each; with launcherx off this may still not bring them back.
+
+# Step 9: animations off. Undo: settings put global <name> 1 (animator_duration_scale was unset)
+global window_animation_scale 0
+global transition_animation_scale 0
+global animator_duration_scale 0

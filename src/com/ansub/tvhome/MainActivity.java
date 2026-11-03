@@ -91,6 +91,8 @@ public class MainActivity extends Activity {
     private static final String PLAY_STORE = "com.android.vending";
     private static final String SETTINGS = "settings";
     private static final String ADD = "add";
+    private static final String ALL = "all";
+    private static final String INPUTS = "inputs";
     private static final String[] EDIT_ITEMS = {"Move", "Replace", "Remove from home", "Uninstall"};
     private static final String[] EDIT_ITEMS_SYSTEM = {"Move", "Replace", "Remove from home", "App info"};
     private static final int PER_ROW = 6, MAX_INPUTS = 4;
@@ -546,16 +548,15 @@ public class MainActivity extends Activity {
             addTile(root, pkg, label, banner, null, icon, gridX(i), gridY(i), w, h);
         }
 
-        // Bottom row: Play Store, HDMI inputs, Settings and Add app, six at most.
+        // Bottom row: All apps, Play Store, Inputs, Settings and Add app. The HDMI inputs share one
+        // Inputs tile, which lists them; it's left out on a box with no inputs of its own.
         int col = 0;
         boolean store = !apps.contains(PLAY_STORE) && launchIntent(pm, PLAY_STORE) != null;
-        List<TvInputInfo> inputs = hdmiInputs();
-        int room = PER_ROW - 2 - (store ? 1 : 0);
-        if (inputs.size() > room) inputs = inputs.subList(0, room);
+        addTile(root, ALL, Strings.t("All apps"), null, LineIcon.GRID, null, m + col++ * (w + g), bottomTop, w, h);
         if (store)
             addTile(root, PLAY_STORE, "Play Store", null, LineIcon.PLAY, null, m + col++ * (w + g), bottomTop, w, h);
-        for (TvInputInfo in : inputs)
-            addTile(root, in.getId(), inputLabel(in), null, LineIcon.HDMI, null, m + col++ * (w + g), bottomTop, w, h);
+        if (!hdmiInputs().isEmpty())
+            addTile(root, INPUTS, Strings.t("Inputs"), null, LineIcon.HDMI, null, m + col++ * (w + g), bottomTop, w, h);
         addTile(root, SETTINGS, Strings.t("Settings"), null, LineIcon.SETTINGS, null, m + col++ * (w + g), bottomTop, w, h);
         addTile(root, ADD, Strings.t("Add app"), null, LineIcon.PLUS, null, m + col * (w + g), bottomTop, w, h);
 
@@ -653,6 +654,7 @@ public class MainActivity extends Activity {
         // the + tile, the inputs taken off the home screen.
         final Runnable menu = editable ? () -> showEditMenu(key)
                 : isInput(key) ? () -> showInputMenu(key)
+                : INPUTS.equals(key) ? this::showInputsMenu
                 : ADD.equals(key) && !hiddenInputs().isEmpty() ? this::showHiddenInputs : null;
         card.setOnKeyListener((v, code, ev) -> {
             boolean ok = code == KeyEvent.KEYCODE_DPAD_CENTER || code == KeyEvent.KEYCODE_ENTER
@@ -773,6 +775,12 @@ public class MainActivity extends Activity {
         Intent i;
         if (ADD.equals(key)) {
             showAddMenu(-1);
+            return;
+        } else if (ALL.equals(key)) {
+            showAllApps();
+            return;
+        } else if (INPUTS.equals(key)) {
+            showInputs();
             return;
         } else if (SETTINGS.equals(key)) {
             // A box has no screen of its own to dim: its picture is the TV's, on the TV's remote. On NVIDIA
@@ -1136,6 +1144,7 @@ public class MainActivity extends Activity {
     // screen. Hiding keeps the input in the TV's list, so nothing about the TV changes.
     private void showInputMenu(final String id) {
         View anchor = tile(id);
+        if (anchor == null) anchor = tile(INPUTS);
         if (anchor == null) return;
         dropdown(anchor, new String[] {"Rename", "Remove from home"}, which -> {
             if (which == 0) showInputNames(id);
@@ -1162,7 +1171,7 @@ public class MainActivity extends Activity {
                 return;
             }
             setInputName(id, which == 0 ? null : names.get(which));
-            focusedKey = id;
+            focusedKey = INPUTS;
             buildTiles();
         });
     }
@@ -1191,7 +1200,7 @@ public class MainActivity extends Activity {
         Runnable save = () -> {
             setInputName(id, name.getText().toString());
             dialog.dismiss();
-            focusedKey = id;
+            focusedKey = INPUTS;
             buildTiles();
         };
         name.setOnEditorActionListener((v, action, event) -> {
@@ -1233,6 +1242,26 @@ public class MainActivity extends Activity {
         buildTiles();
     }
 
+    // OK on the Inputs tile: the HDMI inputs, by name, in a menu under the tile. Picking one switches to it.
+    private void showInputs() {
+        final List<TvInputInfo> inputs = hdmiInputs();
+        View anchor = tile(INPUTS);
+        if (inputs.isEmpty() || anchor == null) return;
+        String[] labels = new String[inputs.size()];
+        for (int i = 0; i < labels.length; i++) labels[i] = inputLabel(inputs.get(i));
+        dropdown(anchor, labels, which -> openInput(inputs.get(which).getId()));
+    }
+
+    // Hold OK (or Menu) on the Inputs tile: pick an input, then rename it or take it off the list.
+    private void showInputsMenu() {
+        final List<TvInputInfo> inputs = hdmiInputs();
+        View anchor = tile(INPUTS);
+        if (inputs.isEmpty() || anchor == null) return;
+        String[] labels = new String[inputs.size()];
+        for (int i = 0; i < labels.length; i++) labels[i] = inputLabel(inputs.get(i));
+        dropdown(anchor, labels, which -> showInputMenu(inputs.get(which).getId()));
+    }
+
     // Long-press on the + tile: the inputs that were taken off the home screen, to put back.
     private void showHiddenInputs() {
         final List<String> ids = new ArrayList<>();
@@ -1248,7 +1277,7 @@ public class MainActivity extends Activity {
             Set<String> now = hiddenInputs();
             now.remove(ids.get(which));
             saveHiddenInputs(now);
-            focusedKey = ids.get(which);
+            focusedKey = INPUTS;
             buildTiles();
         });
     }
@@ -1292,6 +1321,31 @@ public class MainActivity extends Activity {
 
     private void saveHiddenInputs(Set<String> ids) {
         prefs().edit().putString(PREF_HIDDEN_INPUTS, android.text.TextUtils.join("\n", new TreeSet<>(ids))).apply();
+    }
+
+    // Every app that can be opened, by name, including those on the home screen and apps made for
+    // phones (sideloaded ones without a TV banner). Picking one opens it; nothing is added or changed.
+    private void showAllApps() {
+        final PackageManager pm = getPackageManager();
+        TreeMap<String, String> byLabel = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        for (String category : new String[] {Intent.CATEGORY_LEANBACK_LAUNCHER, Intent.CATEGORY_LAUNCHER}) {
+            Intent q = new Intent(Intent.ACTION_MAIN).addCategory(category);
+            for (ResolveInfo ri : pm.queryIntentActivities(q, 0)) {
+                String p = ri.activityInfo.packageName;
+                if (byLabel.containsValue(p) || p.equals(getPackageName())) continue;
+                String label = labelOf(p);
+                if (byLabel.containsKey(label)) label = label + " (" + p + ")";
+                byLabel.put(label, p);
+            }
+        }
+        if (byLabel.isEmpty()) return;
+        final List<String> pkgs = new ArrayList<>(byLabel.values());
+        panel(Strings.t("All apps"), new ArrayList<>(byLabel.keySet()),
+                pos -> fit(pm.getApplicationIcon(pkgs.get(pos)), px(48), px(48)), px(48), -1, null, which -> {
+            Intent i = launchIntent(pm, pkgs.get(which));
+            if (i == null) return;
+            try { startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); } catch (Exception ignored) {}
+        });
     }
 
     // Every launchable app that isn't on the top row yet, by name. The pick is added at the end,

@@ -1,0 +1,8 @@
+package:com.internet.tvbrowser
+package:com.alphainventor.filemanager
+package:com.hikvision.hikconnect
+package:com.sonyliv
+package:in.startv.hotstar
+package:com.mxtech.videoplayer.television
+package:com.graymatrix.did
+package:com.jio.media.stb.ondemand

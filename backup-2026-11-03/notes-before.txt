@@ -1,0 +1,15 @@
+default_input_method=com.tcl.inputmethod.international/.T_IME
+screensaver_enabled=1
+screensaver_components=com.google.android.apps.tv.dreamx/.service.Backdrop
+screensaver_activate_on_sleep=1
+screensaver_activate_on_dock=1
+screen_off_timeout=600000
+sleep_timeout=-1
+window_animation_scale=1.0
+transition_animation_scale=1.0
+animator_duration_scale=null
+home=com.google.android.apps.tv.launcherx/.home.HomeActivity
+MemTotal:        2097152 kB
+MemFree:           40312 kB
+MemAvailable:     459092 kB
+Cached:           472804 kB

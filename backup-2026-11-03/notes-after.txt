@@ -1,0 +1,10 @@
+uptime 207.89s
+com.ansub.tvhome/.MainActivity
+  mCurrentFocus=Window{698b1a3 u0 com.ansub.tvhome/com.ansub.tvhome.MainActivity}
+MemTotal:        2097152 kB
+MemFree:          189124 kB
+MemAvailable:     860560 kB
+Cached:           712800 kB
+SwapTotal:        614396 kB
+SwapFree:         463356 kB
+20

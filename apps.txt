@@ -1,9 +1,11 @@
 # The apps on the top row of your home screen, in order. One package name per line.
 # Apps that aren't installed are skipped.
 # Not sure of a package name? Ask Claude: "What's the package name of <app> on my TV?"
+# Top row for the TCL 65P635 Pro: JioHotstar, YouTube, Hik-Connect, Netflix.
+# Two possible names are listed for JioHotstar and Hik-Connect; the one not on the TV is skipped.
+in.startv.hotstar
+in.startv.hotstaronly
 com.google.android.youtube.tv
+com.connect.enduser
+com.hikvision.hikconnect
 com.netflix.ninja
-com.amazon.amazonvideo.livingroom
-com.disney.disneyplus
-com.hulu.livingroomplus
-com.wbd.stream
